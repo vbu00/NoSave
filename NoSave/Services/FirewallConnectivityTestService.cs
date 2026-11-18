@@ -1,5 +1,7 @@
 ﻿using NoSave.Services.Interfaces;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -42,13 +44,17 @@ namespace NoSave.Services
 
         public bool IsFirewallWorking()
         {
-            string ruleName = "NoSaveTestRule";
+            const string ruleName = "NoSaveTestRule";
 
             if (_availableTestAddresses.Count == 0)
                 return false;
 
             try
             {
+                // A previous run may have been killed in the middle of this check and left the test rule behind.
+                // AddRule skips existing rules, so a stale rule (possibly for another address) must go first.
+                _firewallService.RemoveRule(ruleName);
+
                 foreach (var address in _availableTestAddresses)
                 {
                     _firewallService.AddRule(ruleName, address);
@@ -62,9 +68,21 @@ namespace NoSave.Services
 
                 return true;
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Firewall check failed: {ex}");
+                return false;
+            }
             finally
             {
-                _firewallService.RemoveRule(ruleName);
+                try
+                {
+                    _firewallService.RemoveRule(ruleName);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Could not remove test rule: {ex.Message}");
+                }
             }
         }
 

@@ -194,21 +194,27 @@ You can still use the button manually.</value>
 
 The game may not work in online mode until you unblock them.
 
-Close NoSave anyway?</value>
+Yes — unblock and close
+No — close and keep the block
+Cancel — keep NoSave open</value>
   </data>
   <data name="ServersBlockedCloseWarningMessage_Ru" xml:space="preserve">
     <value>Сервера сейчас заблокированы.
 
 Игра может не работать в онлайн-режиме, пока вы их не разблокируете.
 
-Всё равно закрыть NoSave?</value>
+Да — разблокировать и закрыть
+Нет — закрыть, оставив блокировку
+Отмена — не закрывать NoSave</value>
   </data>
   <data name="ServersBlockedCloseWarningMessage_Uk" xml:space="preserve">
     <value>Сервери зараз заблоковані.
 
 Гра може не працювати в онлайн-режимі, доки ви їх не розблокуєте.
 
-Усе одно закрити NoSave?</value>
+Так — розблокувати й закрити
+Ні — закрити, залишивши блокування
+Скасувати — не закривати NoSave</value>
   </data>
   <data name="ServersBlockedCloseWarningTitle_En" xml:space="preserve">
     <value>Servers are blocked</value>
@@ -218,5 +224,29 @@ Close NoSave anyway?</value>
   </data>
   <data name="ServersBlockedCloseWarningTitle_Uk" xml:space="preserve">
     <value>Сервери заблоковані</value>
+  </data>
+  <data name="ToggleRuleFailedMessage_En" xml:space="preserve">
+    <value>NoSave could not change the Windows Firewall rule.
+
+Make sure NoSave is running as administrator and Windows Firewall is enabled.</value>
+  </data>
+  <data name="ToggleRuleFailedMessage_Ru" xml:space="preserve">
+    <value>NoSave не смог изменить правило Windows Firewall.
+
+Убедитесь, что NoSave запущен от имени администратора и фаервол Windows включён.</value>
+  </data>
+  <data name="ToggleRuleFailedMessage_Uk" xml:space="preserve">
+    <value>NoSave не вдалося змінити правило Windows Firewall.
+
+Переконайтеся, що NoSave запущено від імені адміністратора і фаєрвол Windows увімкнено.</value>
+  </data>
+  <data name="ToggleRuleFailedTitle_En" xml:space="preserve">
+    <value>Firewall error</value>
+  </data>
+  <data name="ToggleRuleFailedTitle_Ru" xml:space="preserve">
+    <value>Ошибка фаервола</value>
+  </data>
+  <data name="ToggleRuleFailedTitle_Uk" xml:space="preserve">
+    <value>Помилка фаєрвола</value>
   </data>
 </root>

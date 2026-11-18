@@ -1,28 +1,37 @@
 ﻿using System;
 using NoSave.Services.Interfaces;
-using NetFwTypeLib;
 using System.Diagnostics;
 
 namespace NoSave.Services
 {
+    /// <summary>
+    /// Windows Firewall access through late-bound COM (HNetCfg.*).
+    /// Late binding avoids the NetFwTypeLib COMReference, which needs the Windows SDK (TlbImp/AxImp) to build.
+    /// </summary>
     public class FirewallService : IFirewallService
     {
-        private INetFwPolicy2 GetFirewallPolicy()
+        // Values from NetFwTypeLib (icftypes.h)
+        private const int NET_FW_ACTION_BLOCK = 0;
+        private const int NET_FW_RULE_DIR_OUT = 2;
+        private const int NET_FW_PROFILE2_ALL = 0x7FFFFFFF;
+
+        private const string RuleGroup = "NoSave";
+        private const string RuleDescription = "Created by NoSave. Safe to delete if NoSave is not running.";
+
+        private static dynamic CreateComObject(string progId)
         {
-            Type policyType = Type.GetTypeFromProgID("HNetCfg.FwPolicy2");
-            return (INetFwPolicy2)Activator.CreateInstance(policyType);
+            Type type = Type.GetTypeFromProgID(progId, throwOnError: true);
+            return Activator.CreateInstance(type);
         }
+
+        private static dynamic GetFirewallPolicy() => CreateComObject("HNetCfg.FwPolicy2");
 
         public bool IsFirewallEnabled()
         {
             try
             {
-                Type managerType = Type.GetTypeFromProgID("HNetCfg.FwMgr");
-                INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(managerType);
-
-                INetFwProfile currentProfile = firewallManager.LocalPolicy.CurrentProfile;
-
-                return currentProfile.FirewallEnabled;
+                dynamic firewallManager = CreateComObject("HNetCfg.FwMgr");
+                return (bool)firewallManager.LocalPolicy.CurrentProfile.FirewallEnabled;
             }
             catch (Exception ex)
             {
@@ -38,10 +47,11 @@ namespace NoSave.Services
 
             try
             {
-                INetFwPolicy2 firewallPolicy = GetFirewallPolicy();
-                foreach (INetFwRule rule in firewallPolicy.Rules)
+                dynamic firewallPolicy = GetFirewallPolicy();
+                foreach (dynamic rule in firewallPolicy.Rules)
                 {
-                    if (rule.Name.Equals(ruleName, StringComparison.OrdinalIgnoreCase))
+                    string name = rule.Name;
+                    if (string.Equals(name, ruleName, StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }
@@ -62,16 +72,18 @@ namespace NoSave.Services
 
             try
             {
-                Type ruleType = Type.GetTypeFromProgID("HNetCfg.FwRule");
-                INetFwRule2 firewallRule = (INetFwRule2)Activator.CreateInstance(ruleType);
+                dynamic firewallRule = CreateComObject("HNetCfg.FwRule");
 
                 firewallRule.Name = ruleName;
-                firewallRule.Enabled = true;
-                firewallRule.Action = NET_FW_ACTION_.NET_FW_ACTION_BLOCK;
+                firewallRule.Description = RuleDescription;
+                firewallRule.Grouping = RuleGroup;
+                firewallRule.Profiles = NET_FW_PROFILE2_ALL;
+                firewallRule.Action = NET_FW_ACTION_BLOCK;
+                firewallRule.Direction = NET_FW_RULE_DIR_OUT;
                 firewallRule.RemoteAddresses = remoteIp;
-                firewallRule.Direction = NET_FW_RULE_DIRECTION_.NET_FW_RULE_DIR_OUT;
+                firewallRule.Enabled = true;
 
-                INetFwPolicy2 firewallPolicy = GetFirewallPolicy();
+                dynamic firewallPolicy = GetFirewallPolicy();
                 firewallPolicy.Rules.Add(firewallRule);
                 Debug.WriteLine($"Successfully added firewall rule '{ruleName}'.");
             }
@@ -84,15 +96,24 @@ namespace NoSave.Services
 
         public void RemoveRule(string ruleName)
         {
-            try
+            if (string.IsNullOrEmpty(ruleName))
+                return;
+
+            // Rules.Remove deletes only one rule per call, so repeat until no rule with this name is left.
+            const int maxAttempts = 50;
+            for (int i = 0; i < maxAttempts && CheckFirewallRule(ruleName); i++)
             {
-                INetFwPolicy2 firewallPolicy = GetFirewallPolicy();
-                firewallPolicy.Rules.Remove(ruleName);
-                Debug.WriteLine($"Successfully removed firewall rule '{ruleName}'.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Could not remove firewall rule '{ruleName}'. It might not exist. Details: {ex.Message}");
+                try
+                {
+                    dynamic firewallPolicy = GetFirewallPolicy();
+                    firewallPolicy.Rules.Remove(ruleName);
+                    Debug.WriteLine($"Removed firewall rule '{ruleName}'.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Could not remove firewall rule '{ruleName}': {ex.Message}");
+                    throw;
+                }
             }
         }
     }

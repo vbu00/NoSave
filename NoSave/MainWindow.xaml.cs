@@ -2,6 +2,7 @@ using NoSave.Models;
 using NoSave.Services.Interfaces;
 using NoSave.ViewModels;
 using NoSave.Views;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -62,15 +63,34 @@ namespace NoSave
             if (!_firewallModel.IsRuleActive)
                 return;
 
+            // Yes = unblock and close, No = close and keep the block, Cancel = stay open.
             MessageBoxResult result = MessageBox.Show(
                 App.Localization.GetString("ServersBlockedCloseWarningMessage"),
                 App.Localization.GetString("ServersBlockedCloseWarningTitle"),
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Yes);
 
-            if (result != MessageBoxResult.Yes)
+            switch (result)
             {
-                e.Cancel = true;
+                case MessageBoxResult.Yes:
+                    try
+                    {
+                        _firewallModel.RemoveBlock();
+                    }
+                    catch (Exception ex)
+                    {
+                        e.Cancel = true;
+                        App.ShowError("ToggleRuleFailed", ex);
+                    }
+                    break;
+
+                case MessageBoxResult.No:
+                    break;
+
+                default:
+                    e.Cancel = true;
+                    break;
             }
         }
     }

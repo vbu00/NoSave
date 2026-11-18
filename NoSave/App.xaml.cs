@@ -2,7 +2,9 @@
 using NoSave.Services;
 using NoSave.Services.Interfaces;
 using NoSave.Services.Localization;
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 
 namespace NoSave
@@ -60,21 +62,66 @@ namespace NoSave
             mainWindow.Show();
         }
 
+        public static void ShowError(string messageKey, Exception ex)
+        {
+            string message = Localization.GetString(messageKey + "Message");
+            if (ex != null)
+                message += Environment.NewLine + Environment.NewLine + ex.Message;
+
+            MessageBox.Show(
+                message,
+                Localization.GetString(messageKey + "Title"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        /// <summary>
+        /// Closes older copies of NoSave. Only processes started from the same executable file are closed,
+        /// so an unrelated program that happens to be called "NoSave" is left alone.
+        /// </summary>
         private void CloseOtherInstances()
         {
-            Process currentProcess = Process.GetCurrentProcess();
-            string processName = currentProcess.ProcessName;
-
-            foreach (Process process in Process.GetProcessesByName(processName))
+            using (Process currentProcess = Process.GetCurrentProcess())
             {
-                if (process.Id == currentProcess.Id)
-                    continue;
+                string currentPath = GetExecutablePath(currentProcess);
+                if (currentPath == null)
+                    return;
 
-                try
+                foreach (Process process in Process.GetProcessesByName(currentProcess.ProcessName))
                 {
-                    process.Kill();
+                    using (process)
+                    {
+                        if (process.Id == currentProcess.Id)
+                            continue;
+
+                        string otherPath = GetExecutablePath(process);
+                        if (!string.Equals(otherPath, currentPath, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        try
+                        {
+                            process.Kill();
+                            process.WaitForExit(3000);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Could not close previous instance {process.Id}: {ex.Message}");
+                        }
+                    }
                 }
-                catch { }
+            }
+        }
+
+        private static string GetExecutablePath(Process process)
+        {
+            try
+            {
+                return Path.GetFullPath(process.MainModule.FileName);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Could not read path of process {process.Id}: {ex.Message}");
+                return null;
             }
         }
     }

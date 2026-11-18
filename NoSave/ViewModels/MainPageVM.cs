@@ -20,8 +20,8 @@ namespace NoSave.ViewModels
         private readonly IGlobalHotkeyService _hotkeyService;
         private bool _isHotkeyRegistered;
 
-        private string _ruleName = "NoSave";
-        private string _remoteIP = "192.81.241.171";
+        private const string _ruleName = FirewallModel.RuleName;
+        private const string _remoteIP = "192.81.241.171";
 
         private bool _isBusy;
 
@@ -121,6 +121,8 @@ namespace NoSave.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
+                _firewallModel.UpdateStatus();
+                App.ShowError("ToggleRuleFailed", ex);
             }
             finally
             {
